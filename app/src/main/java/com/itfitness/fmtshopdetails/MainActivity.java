@@ -16,7 +16,6 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.blankj.utilcode.util.BarUtils;
@@ -43,15 +42,14 @@ import net.lucode.hackware.magicindicator.buildins.commonnavigator.titles.ColorT
 import net.lucode.hackware.magicindicator.buildins.commonnavigator.titles.SimplePagerTitleView;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private ScrollableLayout scrollableLayout;
     private ViewPager viewPager;
     private MagicIndicator magicIndicator;
     private ArrayList<Fragment> fragments;
-    private ImageView imageViewBackWhite,imageViewBackBlack;
-    private RelativeLayout relativeLayoutTitleBlack;//上滑显示的标题
+    private ImageView imageViewBack,imageViewSearch;
+    private LinearLayout titlellContainer;//标题栏
     private View vTitleStatusbar;//标题状态栏占位符
     private FlowLayout flowLayoutCounpons;//优惠券未展开状态
     private LinearLayout linearLayoutCounpons,linearLayoutCounponsExt;
@@ -59,6 +57,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ShadowLayout sdlShopinfo;
     private FrameLayout flowLayoutPullBack;//点击收缩
     private View vExtmask;//展开后的背景
+    private View vTitilebg;//标题栏背景View
+    private View vFlag;//负责计算搜索框扩张的宽度的View
+    private LinearLayout llSearch;//搜索框
     private boolean isShopInfoExt = false;//是否是展开状态
     private int shopInfoRectDefaultHeight = 0;//展开收缩模块的默认高度
     private float shopInfoRectStartX,shopInfoRectStartY;
@@ -102,8 +103,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 float alpha = (float) currentY / (float) maxY;
                 alpha = Math.min(1,Math.max(0,alpha));
                 BarUtils.setStatusBarLightMode(MainActivity.this,alpha>0.5f);//如果大于0.5，状态栏模式换为亮模式
+                if(alpha >= 0.5){
+                    float alphaBlack = (alpha - 0.5f) * 2;
+                    imageViewBack.setImageResource(R.drawable.ic_back_black);
+                    imageViewBack.setAlpha(alphaBlack);
+                }else {
+                    float alphaWhite = (0.5f - alpha) * 2;
+                    imageViewBack.setImageResource(R.drawable.ic_back_white);
+                    imageViewBack.setAlpha(alphaWhite);
+                }
+                ViewGroup.LayoutParams layoutParams = llSearch.getLayoutParams();
+                layoutParams.width = (int)(alpha * vFlag.getWidth());
+                llSearch.setLayoutParams(layoutParams);
+                llSearch.setAlpha(alpha);
+                if(alpha > 0.1){
+                    imageViewSearch.setVisibility(View.INVISIBLE);
+                }else {
+                    imageViewSearch.setVisibility(View.VISIBLE);
+                }
+                imageViewSearch.setAlpha(1 - alpha);
+                vTitilebg.setAlpha(alpha);
                 vTitleStatusbar.setAlpha(alpha);
-                relativeLayoutTitleBlack.setAlpha(alpha);//滑动改变透明度
             }
         });
         viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
@@ -143,8 +163,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
         flowLayoutPullBack.setOnClickListener(this);
-        imageViewBackWhite.setOnClickListener(this);
-        imageViewBackBlack.setOnClickListener(this);
+        imageViewBack.setOnClickListener(this);
         linearLayoutCounpons.setOnClickListener(this);
     }
     /**
@@ -236,9 +255,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         scrollableLayout = findViewById(R.id.scrollableLayout);
         viewPager = findViewById(R.id.vp);
         magicIndicator = findViewById(R.id.indicator);
-        imageViewBackWhite = findViewById(R.id.title_img_back_white);
-        imageViewBackBlack = findViewById(R.id.title_img_back_black);
-        relativeLayoutTitleBlack = findViewById(R.id.title_rl_black);
+        imageViewBack = findViewById(R.id.title_img_back_white);
+        titlellContainer = findViewById(R.id.title_ll_container);
         vTitleStatusbar = findViewById(R.id.title_statusbar);
         flowLayoutCounpons = findViewById(R.id.fl_coupons);
         linearLayoutCounpons = findViewById(R.id.ll_coupons);
@@ -247,9 +265,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sdlShopinfo = findViewById(R.id.sdl_shopinfo);
         vExtmask = findViewById(R.id.v_extmask);
         flowLayoutPullBack = findViewById(R.id.fl_pullback);
+        vTitilebg = findViewById(R.id.v_titilebg);
+        imageViewSearch = findViewById(R.id.title_img_search_white);
+        llSearch = findViewById(R.id.ll_search);
+        vFlag = findViewById(R.id.v_flag);
         vExtmask.setAlpha(0f);
         vTitleStatusbar.setAlpha(0f);//状态栏占位也设置为透明
-        relativeLayoutTitleBlack.setAlpha(0f);//默认为透明
+        vTitilebg.setAlpha(0f);
+        llSearch.setAlpha(0f);
         linearLayoutCounponsExt.setAlpha(0f);//展开状态的优惠券初始设为透明
         linearLayoutCounponsExt.setVisibility(View.GONE);
         scrollableLayout.post(new Runnable() {
@@ -259,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 ViewGroup.LayoutParams layoutParams = vTitleStatusbar.getLayoutParams();
                 layoutParams.height = BarUtils.getStatusBarHeight();
                 vTitleStatusbar.setLayoutParams(layoutParams);
-                int height = relativeLayoutTitleBlack.getHeight()+BarUtils.getStatusBarHeight();
+                int height = titlellContainer.getHeight()+BarUtils.getStatusBarHeight();
                 scrollableLayout.setMaxYOffset(height);
             }
         });
@@ -314,9 +337,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.title_img_back_white:
-                onBackPressed();
-                break;
-            case R.id.title_img_back_black:
                 onBackPressed();
                 break;
             case R.id.ll_coupons:
